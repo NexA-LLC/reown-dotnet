@@ -17,22 +17,30 @@ concurrency:
 
 jobs:
   nuget:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.NEXA_PUBLIC_SELF_HOSTED_RUNNER_ENABLED == 'true' && github.repository == 'NexA-LLC/reown-dotnet' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && '["self-hosted","macOS","ARM64","buildchan"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Create isolated .NET directories
+        run: |
+          dotnet_state="$(mktemp -d "$RUNNER_TEMP/reown-dotnet.XXXXXX")"
+          echo "DOTNET_INSTALL_DIR=$dotnet_state/sdk" >> "$GITHUB_ENV"
+          echo "DOTNET_CLI_HOME=$dotnet_state/home" >> "$GITHUB_ENV"
+          echo "NUGET_PACKAGES=$dotnet_state/packages" >> "$GITHUB_ENV"
+          echo "NUGET_HTTP_CACHE_PATH=$dotnet_state/http-cache" >> "$GITHUB_ENV"
+          echo "NUGET_PLUGINS_CACHE_PATH=$dotnet_state/plugins-cache" >> "$GITHUB_ENV"
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             8.0.x
 
       - name: Install dotnet-script
         run: |
-          dotnet tool install -g dotnet-script
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+          dotnet tool install --tool-path "$RUNNER_TEMP/reown-dotnet-tools-${{ github.job }}" dotnet-script
+          echo "$RUNNER_TEMP/reown-dotnet-tools-${{ github.job }}" >> "$GITHUB_PATH"
 
       - name: Build Release
         run: dotnet build Reown.NoUnity.slnf -c Release --restore
@@ -52,7 +60,7 @@ jobs:
             !**/test/**/bin/**/*.dll
 
   unity:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.NEXA_PUBLIC_SELF_HOSTED_RUNNER_ENABLED == 'true' && github.repository == 'NexA-LLC/reown-dotnet' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && '["self-hosted","macOS","ARM64","buildchan"]' || '["ubuntu-latest"]') }}
     permissions:
       contents: write
     steps:
@@ -61,21 +69,29 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Create isolated .NET directories
+        run: |
+          dotnet_state="$(mktemp -d "$RUNNER_TEMP/reown-dotnet.XXXXXX")"
+          echo "DOTNET_INSTALL_DIR=$dotnet_state/sdk" >> "$GITHUB_ENV"
+          echo "DOTNET_CLI_HOME=$dotnet_state/home" >> "$GITHUB_ENV"
+          echo "NUGET_PACKAGES=$dotnet_state/packages" >> "$GITHUB_ENV"
+          echo "NUGET_HTTP_CACHE_PATH=$dotnet_state/http-cache" >> "$GITHUB_ENV"
+          echo "NUGET_PLUGINS_CACHE_PATH=$dotnet_state/plugins-cache" >> "$GITHUB_ENV"
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             8.0.x
 
       - name: Install dotnet-script
         run: |
-          dotnet tool install -g dotnet-script
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+          dotnet tool install --tool-path "$RUNNER_TEMP/reown-dotnet-tools-${{ github.job }}" dotnet-script
+          echo "$RUNNER_TEMP/reown-dotnet-tools-${{ github.job }}" >> "$GITHUB_PATH"
 
       - name: Configure Git
         run: |
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
 
       - name: Create git tags
         run: |
