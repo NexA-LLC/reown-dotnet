@@ -1,5 +1,13 @@
 # NexA fork runner policy
 
+Public self-hosted execution is prepared but off by default. The buildman6
+Default runner group currently excludes public repositories. Enabling it
+requires both public-repository runner access and the repository/organization
+variable `NEXA_PUBLIC_SELF_HOSTED_RUNNER_ENABLED` set to `true`. This PR changes
+neither setting. With the variable unset or false, eligible jobs keep their
+original Ubuntu runner. The existing repository and trusted-event checks still
+apply after opt-in; untrusted events never gain access to the private Mac.
+
 The .NET-only package/tag release jobs and the source-only Unity-version sync
 job may select buildman6 through `[self-hosted, macOS, ARM64, buildchan]` only
 for `push`/`workflow_dispatch` in `NexA-LLC/reown-dotnet`. Other events retain the

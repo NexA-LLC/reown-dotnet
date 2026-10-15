@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   sync-unity-version:
-    runs-on: ${{ fromJSON(github.repository == 'NexA-LLC/reown-dotnet' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && '["self-hosted","macOS","ARM64","buildchan"]' || '["ubuntu-latest"]') }}
+    runs-on: ${{ fromJSON(vars.NEXA_PUBLIC_SELF_HOSTED_RUNNER_ENABLED == 'true' && github.repository == 'NexA-LLC/reown-dotnet' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && '["self-hosted","macOS","ARM64","buildchan"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 15
     steps:
       - name: Checkout
