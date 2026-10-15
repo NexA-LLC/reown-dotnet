@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   sync-unity-version:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(github.repository == 'NexA-LLC/reown-dotnet' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && '["self-hosted","macOS","ARM64","buildchan"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -22,16 +22,24 @@ jobs:
           ref: ${{ github.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create isolated .NET directories
+        run: |
+          dotnet_state="$(mktemp -d "$RUNNER_TEMP/reown-dotnet.XXXXXX")"
+          echo "DOTNET_INSTALL_DIR=$dotnet_state/sdk" >> "$GITHUB_ENV"
+          echo "DOTNET_CLI_HOME=$dotnet_state/home" >> "$GITHUB_ENV"
+          echo "NUGET_PACKAGES=$dotnet_state/packages" >> "$GITHUB_ENV"
+          echo "NUGET_HTTP_CACHE_PATH=$dotnet_state/http-cache" >> "$GITHUB_ENV"
+          echo "NUGET_PLUGINS_CACHE_PATH=$dotnet_state/plugins-cache" >> "$GITHUB_ENV"
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             8.0.x
 
       - name: Install dotnet-script
         run: |
-          dotnet tool install -g dotnet-script
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+          dotnet tool install --tool-path "$RUNNER_TEMP/reown-dotnet-tools-${{ github.job }}" dotnet-script
+          echo "$RUNNER_TEMP/reown-dotnet-tools-${{ github.job }}" >> "$GITHUB_PATH"
 
       - name: Sync Unity Package Version
         run: dotnet-script ./.github/scripts/sync-unity-version.csx
@@ -44,8 +52,8 @@ jobs:
       - name: Commit changes
         if: steps.git-check.outputs.changes == 'true'
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --local user.name 'github-actions[bot]'
+          git config --local user.email 'github-actions[bot]@users.noreply.github.com'
           git add -u
           git commit -m "Sync Unity Package Versions"
           git push
